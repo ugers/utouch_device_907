@@ -1,0 +1,57 @@
+Ubuntu Touch Preview sun4i
+===============
+Compilation Notes
+-----------------
+You'll also need to set up the tools PPA https://wiki.ubuntu.com/Touch/Install#Step_1_-_Desktop_Setup
+
+All the Android code can be downloaded from the phablet-dev-bootstrap tool provided by the phablet-tools package 
+installed in the previous step:
+
+To get the code setup run:
+
+	phablet-dev-bootstrap [target_directory]
+
+If for some reason the sync ends midway, you can continue the sync with the -c switch, so the command would be:
+
+	phablet-dev-bootstrap -c [target_directory]
+
+Alternatively, if you are just building an image for an already supported device, you can specify the -v switch:
+
+	phablet-dev-bootstrap -v [device codenames] [target_directory]
+
+The phablet-dev-bootstrap command will automatically use the repo tool with the Ubuntu Touch Preview custom manifest
+to download all the git repositories and needed data. 
+Be aware that this step takes a long time and requires at least 15GB (plus 2-3GB for the binary output).
+
+Enabling a new device:
+paste these lines inside new file .repo/manifests/local_manifest.xml
+and paste these lines inside new file .repo/local_manifest.xml
+
+	<?xml version="1.0" encoding="UTF-8"?>
+	<manifest>
+	  <!-- remote  name="github" fetch="git://github.com/" /-->
+	  <project remote="github" revision="ubuntu-touch-preview" name="ugers/android_device_907" path="device/softwinner/907" />
+	  <project remote="github" revision="cm-10.1" name="ugers/android_hardware_realtek" path="hardware/realtek" />
+	  <project remote="github" revision="ubuntu-touch-preview" name="ugers/utouch_hardware_exDroid" path="hardware/exDroid" />
+	</manifest>
+
+now type this command
+
+	phablet-dev-bootstrap -c [target_directory]
+
+finally you're ready to build it
+
+	source build/envsetup.sh && brunch 907
+
+Prerequisites:
+Prebuilts
+
+	cd into vendor/cm and do
+	./get-prebuilts
+	
+Patches - (if you have already modify your tree and patches can't be applied, run: repo forall -c git reset --hard)
+
+More information about ubuntu compilation you must find there:
+
+	https://wiki.ubuntu.com/Touch/Porting
+	

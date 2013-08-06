@@ -1,0 +1,86 @@
+diff --git a/frameworks/base/services/java/com/android/server/WifiService.java b/frameworks/base/services/java/com/android/server/WifiService.java
+--- a/frameworks/base/services/java/com/android/server/WifiService.java
++++ b/frameworks/base/services/java/com/android/server/WifiService.java
+@@ -1032,6 +1032,7 @@ public void onReceive(Context context, Intent intent) {
+                     Slog.d(TAG, "ACTION_SCREEN_ON");
+                 }
+                 mAlarmManager.cancel(mIdleIntent);
++    mWifiStateMachine.releaseKeepaliveLock();
+                 mScreenOff = false;
+                 evaluateTrafficStatsPolling();
+                 setDeviceIdleAndUpdateWifi(false);
+@@ -1048,14 +1049,18 @@ public void onReceive(Context context, Intent intent) {
+                  * or plugged in to AC).
+                  */
+                 if (!shouldWifiStayAwake(stayAwakeConditions, mPluggedType)) {
++      mWifiStateMachine.acquireKeepaliveLock();
+                     //Delayed shutdown if wifi is connected
+-                    if (mNetworkInfo.getDetailedState() == DetailedState.CONNECTED) {
++                    //if (mNetworkInfo.getDetailedState() == DetailedState.CONNECTED) {
++        if (true) {
+                         if (DBG) Slog.d(TAG, "setting ACTION_DEVICE_IDLE: " + idleMillis + " ms");
+                         mAlarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis()
+                                 + idleMillis, mIdleIntent);
+                     } else {
+                         setDeviceIdleAndUpdateWifi(true);
+                     }
++    } else {
++        mWifiStateMachine.acquireKeepaliveLock();
+                 }
+             } else if (action.equals(ACTION_DEVICE_IDLE)) {
+                 setDeviceIdleAndUpdateWifi(true);
+diff --git a/frameworks/base/wifi/java/android/net/wifi/WifiStateMachine.java b//frameworks/base/wifi/java/android/net/wifi/WifiStateMachine.java
+--- a/frameworks/base/wifi/java/android/net/wifi/WifiStateMachine.java
++++ b/frameworks/base/wifi/java/android/net/wifi/WifiStateMachine.java
+@@ -193,6 +193,8 @@
+
+     // Wakelock held during wifi start/stop and driver load/unload
+     private PowerManager.WakeLock mWakeLock;
++    private PowerManager.WakeLock mKeepaliveLock;
++    private PowerManager mPowerManager;
+
+     private Context mContext;
+
+@@ -684,10 +686,11 @@ public void onChange(boolean selfChange) {
+
+         mScanResultCache = new LruCache<String, ScanResult>(SCAN_RESULT_CACHE_SIZE);
+
+-        PowerManager powerManager = (PowerManager)mContext.getSystemService(Context.POWER_SERVICE);
+-        mWakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
++  mPowerManager = (PowerManager)mContext.getSystemService(Context.POWER_SERVICE);
++  mWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
++  mKeepaliveLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "WifiKeepaliveLock");
+
+-        mSuspendWakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "WifiSuspend");
++        mSuspendWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "WifiSuspend");
+         mSuspendWakeLock.setReferenceCounted(false);
+
+         addState(mDefaultState);
+@@ -755,6 +758,18 @@ public void startScan(boolean forceActive) {
+                 SCAN_ACTIVE : SCAN_PASSIVE, 0));
+     }
+
++  public void acquireKeepaliveLock() {
++    loge("acquireKeepaliveLock");
++    if (!mKeepaliveLock.isHeld())
++      mKeepaliveLock.acquire();
++  }
++
++  public void releaseKeepaliveLock() {
++    loge("releaseKeepaliveLock");
++    if (mKeepaliveLock.isHeld())
++      mKeepaliveLock.release();
++  }
++
+     /**
+      * TODO: doc
+      */
+@@ -2888,6 +2903,8 @@ public boolean processMessage(Message message) {
+                     mWakeLock.acquire();
+                     mWifiNative.stopDriver();
+                     mWakeLock.release();
++        setWifiEnabled(false);
++        releaseKeepaliveLock();
+                     if (mP2pSupported) {
+                         transitionTo(mWaitForP2pDisableState);
+                     } else {
