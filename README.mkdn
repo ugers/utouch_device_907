@@ -1,4 +1,4 @@
-Ubuntu Touch Preview sun4i
+Ubuntu Touch Preview Sun4i
 ===============
 Compilation Notes
 -----------------
@@ -30,7 +30,7 @@ and paste these lines inside new file .repo/local_manifest.xml
 	<?xml version="1.0" encoding="UTF-8"?>
 	<manifest>
 	  <!-- remote  name="github" fetch="git://github.com/" /-->
-	  <project remote="github" revision="ubuntu-touch-preview" name="ugers/android_device_907" path="device/softwinner/907" />
+	  <project remote="github" revision="ubuntu-touch-preview" name="ugers/utouch_device_907" path="device/softwinner/907" />
 	  <project remote="github" revision="cm-10.1" name="ugers/android_hardware_realtek" path="hardware/realtek" />
 	  <project remote="github" revision="ubuntu-touch-preview" name="ugers/utouch_hardware_exDroid" path="hardware/exDroid" />
 	</manifest>
